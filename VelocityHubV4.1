@@ -1,0 +1,582 @@
+--// VELOCITY HUB v4.3 - TWEEN BYPASS AUTO WALK
+--// Speed / Teleport / Smooth AutoWalk Bypass / FPS
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+
+--==================================================
+-- SETTINGS
+--==================================================
+
+local SpeedEnabled = false
+local SpeedValue = 16
+local Checkpoint = nil
+local AutoWalkCheckpoint = nil
+local IconText = "V"
+
+local IsAutoWalking = false
+local AutoWalkSpeed = 300 -- Дистанция студов в секунду
+
+--==================================================
+-- GUI
+--==================================================
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "VelocityHub"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = PlayerGui
+
+--==================================================
+-- MAIN FRAME
+--==================================================
+
+local Main = Instance.new("Frame")
+Main.Name = "Main"
+Main.Size = UDim2.new(0, 260, 0, 310)
+Main.Position = UDim2.new(0.5, -130, 0.5, -155)
+Main.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+Main.BorderSizePixel = 0
+Main.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = Main
+
+--==================================================
+-- TITLE BAR
+--==================================================
+
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 38)
+TitleBar.BackgroundTransparency = 1
+TitleBar.Active = true
+TitleBar.Parent = Main
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -45, 1, 0)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "Velocity Hub v4.3"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.TextSize = 18
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TitleBar
+
+--==================================================
+-- CLOSE BUTTON
+--==================================================
+
+local Close = Instance.new("TextButton")
+Close.Size = UDim2.new(0, 30, 0, 30)
+Close.Position = UDim2.new(1, -34, 0, 4)
+Close.BackgroundColor3 = Color3.fromRGB(45, 45, 52)
+Close.BorderSizePixel = 0
+Close.Text = "×"
+Close.TextColor3 = Color3.new(1, 1, 1)
+Close.TextSize = 22
+Close.Font = Enum.Font.GothamBold
+Close.Parent = TitleBar
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 7)
+CloseCorner.Parent = Close
+
+--==================================================
+-- FPS LABEL
+--==================================================
+
+local FPSLabel = Instance.new("TextLabel")
+FPSLabel.Size = UDim2.new(1, -20, 0, 20)
+FPSLabel.Position = UDim2.new(0, 10, 1, -25)
+FPSLabel.BackgroundTransparency = 1
+FPSLabel.Text = "FPS: ..."
+FPSLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+FPSLabel.TextSize = 13
+FPSLabel.Font = Enum.Font.Gotham
+FPSLabel.Parent = Main
+
+--==================================================
+-- TABS
+--==================================================
+
+local TabContainer = Instance.new("Frame")
+TabContainer.Size = UDim2.new(1, -12, 0, 32)
+TabContainer.Position = UDim2.new(0, 6, 0, 42)
+TabContainer.BackgroundTransparency = 1
+TabContainer.Parent = Main
+
+local SpeedTab = Instance.new("TextButton")
+SpeedTab.Size = UDim2.new(0.32, 0, 1, 0)
+SpeedTab.Position = UDim2.new(0, 0, 0, 0)
+SpeedTab.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+SpeedTab.BorderSizePixel = 0
+SpeedTab.Text = "SPEED"
+SpeedTab.TextColor3 = Color3.new(1, 1, 1)
+SpeedTab.TextSize = 11
+SpeedTab.Font = Enum.Font.GothamBold
+SpeedTab.Parent = TabContainer
+
+local TeleportTab = Instance.new("TextButton")
+TeleportTab.Size = UDim2.new(0.32, 0, 1, 0)
+TeleportTab.Position = UDim2.new(0.34, 0, 0, 0)
+TeleportTab.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
+TeleportTab.BorderSizePixel = 0
+TeleportTab.Text = "TELEPORT"
+TeleportTab.TextColor3 = Color3.new(1, 1, 1)
+TeleportTab.TextSize = 11
+TeleportTab.Font = Enum.Font.GothamBold
+TeleportTab.Parent = TabContainer
+
+local AutoWalkTab = Instance.new("TextButton")
+AutoWalkTab.Size = UDim2.new(0.32, 0, 1, 0)
+AutoWalkTab.Position = UDim2.new(0.68, 0, 0, 0)
+AutoWalkTab.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
+AutoWalkTab.BorderSizePixel = 0
+AutoWalkTab.Text = "AUTO WALK"
+AutoWalkTab.TextColor3 = Color3.new(1, 1, 1)
+AutoWalkTab.TextSize = 11
+AutoWalkTab.Font = Enum.Font.GothamBold
+AutoWalkTab.Parent = TabContainer
+
+for _, Button in ipairs({SpeedTab, TeleportTab, AutoWalkTab}) do
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 6)
+    Corner.Parent = Button
+end
+
+--==================================================
+-- FRAMES
+--==================================================
+
+local SpeedFrame = Instance.new("Frame")
+SpeedFrame.Size = UDim2.new(1, -20, 0, 180)
+SpeedFrame.Position = UDim2.new(0, 10, 0, 82)
+SpeedFrame.BackgroundTransparency = 1
+SpeedFrame.Parent = Main
+
+local TeleportFrame = Instance.new("Frame")
+TeleportFrame.Size = UDim2.new(1, -20, 0, 180)
+TeleportFrame.Position = UDim2.new(0, 10, 0, 82)
+TeleportFrame.BackgroundTransparency = 1
+TeleportFrame.Visible = false
+TeleportFrame.Parent = Main
+
+local AutoWalkFrame = Instance.new("Frame")
+AutoWalkFrame.Size = UDim2.new(1, -20, 0, 180)
+AutoWalkFrame.Position = UDim2.new(0, 10, 0, 82)
+AutoWalkFrame.BackgroundTransparency = 1
+AutoWalkFrame.Visible = false
+AutoWalkFrame.Parent = Main
+
+--==================================================
+-- HELPER FUNCTIONS
+--==================================================
+
+local function CreateButton(Parent, Text, Y)
+    local Button = Instance.new("TextButton")
+    Button.Size = UDim2.new(1, 0, 0, 36)
+    Button.Position = UDim2.new(0, 0, 0, Y)
+    Button.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+    Button.BorderSizePixel = 0
+    Button.Text = Text
+    Button.TextColor3 = Color3.new(1, 1, 1)
+    Button.TextSize = 13
+    Button.Font = Enum.Font.Gotham
+    Button.Parent = Parent
+
+    local Corner = Instance.new("UICorner")
+    Corner.CornerRadius = UDim.new(0, 7)
+    Corner.Parent = Button
+
+    return Button
+end
+
+--==================================================
+-- SPEED TAB CONTENT
+--==================================================
+
+local SpeedButton = CreateButton(SpeedFrame, "Speed: OFF", 0)
+
+local SpeedBox = Instance.new("TextBox")
+SpeedBox.Size = UDim2.new(1, 0, 0, 34)
+SpeedBox.Position = UDim2.new(0, 0, 0, 42)
+SpeedBox.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
+SpeedBox.BorderSizePixel = 0
+SpeedBox.Text = "16"
+SpeedBox.PlaceholderText = "Speed"
+SpeedBox.TextColor3 = Color3.new(1, 1, 1)
+SpeedBox.TextSize = 14
+SpeedBox.Font = Enum.Font.Gotham
+SpeedBox.ClearTextOnFocus = false
+SpeedBox.Parent = SpeedFrame
+
+local SpeedCorner = Instance.new("UICorner")
+SpeedCorner.CornerRadius = UDim.new(0, 7)
+SpeedCorner.Parent = SpeedBox
+
+SpeedBox.FocusLost:Connect(function()
+    local Value = tonumber(SpeedBox.Text)
+    if Value then
+        SpeedValue = math.clamp(Value, 1, 1000)
+        SpeedBox.Text = tostring(SpeedValue)
+    else
+        SpeedBox.Text = tostring(SpeedValue)
+    end
+end)
+
+SpeedButton.MouseButton1Click:Connect(function()
+    SpeedEnabled = not SpeedEnabled
+    if SpeedEnabled then
+        SpeedButton.Text = "Speed: ON"
+    else
+        SpeedButton.Text = "Speed: OFF"
+        local Character = Player.Character
+        local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+        if Humanoid then
+            Humanoid.WalkSpeed = 16
+        end
+    end
+end)
+
+local IconLabel = Instance.new("TextLabel")
+IconLabel.Size = UDim2.new(1, 0, 0, 20)
+IconLabel.Position = UDim2.new(0, 0, 0, 84)
+IconLabel.BackgroundTransparency = 1
+IconLabel.Text = "Icon Text"
+IconLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+IconLabel.TextSize = 12
+IconLabel.Font = Enum.Font.Gotham
+IconLabel.TextXAlignment = Enum.TextXAlignment.Left
+IconLabel.Parent = SpeedFrame
+
+local IconBox = Instance.new("TextBox")
+IconBox.Size = UDim2.new(1, 0, 0, 34)
+IconBox.Position = UDim2.new(0, 0, 0, 106)
+IconBox.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
+IconBox.BorderSizePixel = 0
+IconBox.Text = IconText
+IconBox.TextColor3 = Color3.new(1, 1, 1)
+IconBox.TextSize = 14
+IconBox.Font = Enum.Font.GothamBold
+IconBox.ClearTextOnFocus = false
+IconBox.Parent = SpeedFrame
+
+local IconBoxCorner = Instance.new("UICorner")
+IconBoxCorner.CornerRadius = UDim.new(0, 7)
+IconBoxCorner.Parent = IconBox
+
+--==================================================
+-- TELEPORT TAB CONTENT
+--==================================================
+
+local SetCheckpoint = CreateButton(TeleportFrame, "Set Checkpoint", 0)
+local TeleportCheckpoint = CreateButton(TeleportFrame, "Teleport to Checkpoint", 42)
+
+SetCheckpoint.MouseButton1Click:Connect(function()
+    local Character = Player.Character
+    local Root = Character and Character:FindFirstChild("HumanoidRootPart")
+    if Root then
+        Checkpoint = Root.CFrame
+        SetCheckpoint.Text = "Checkpoint Saved"
+        task.delay(1, function()
+            SetCheckpoint.Text = "Set Checkpoint"
+        end)
+    end
+end)
+
+TeleportCheckpoint.MouseButton1Click:Connect(function()
+    if not Checkpoint then
+        TeleportCheckpoint.Text = "No Checkpoint"
+        task.delay(1, function()
+            TeleportCheckpoint.Text = "Teleport to Checkpoint"
+        end)
+        return
+    end
+
+    local Character = Player.Character
+    local Root = Character and Character:FindFirstChild("HumanoidRootPart")
+    if Root then
+        Root.CFrame = Checkpoint
+    end
+end)
+
+--==================================================
+-- AUTO WALK TAB CONTENT (TWEEN BYPASS - NO RUBBERBAND)
+--==================================================
+
+local SetAutoWalkPoint = CreateButton(AutoWalkFrame, "Set Target Point", 0)
+local StartAutoWalk = CreateButton(AutoWalkFrame, "Start Ultra Speed", 42)
+
+local AutoWalkBox = Instance.new("TextBox")
+AutoWalkBox.Size = UDim2.new(1, 0, 0, 34)
+AutoWalkBox.Position = UDim2.new(0, 0, 0, 84)
+AutoWalkBox.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
+AutoWalkBox.BorderSizePixel = 0
+AutoWalkBox.Text = tostring(AutoWalkSpeed)
+AutoWalkBox.PlaceholderText = "Speed (e.g. 200 - 800)"
+AutoWalkBox.TextColor3 = Color3.new(1, 1, 1)
+AutoWalkBox.TextSize = 13
+AutoWalkBox.Font = Enum.Font.Gotham
+AutoWalkBox.ClearTextOnFocus = false
+AutoWalkBox.Parent = AutoWalkFrame
+
+local AutoWalkCorner = Instance.new("UICorner")
+AutoWalkCorner.CornerRadius = UDim.new(0, 7)
+AutoWalkCorner.Parent = AutoWalkBox
+
+AutoWalkBox.FocusLost:Connect(function()
+    local Value = tonumber(AutoWalkBox.Text)
+    if Value then
+        AutoWalkSpeed = math.clamp(Value, 20, 3000)
+        AutoWalkBox.Text = tostring(AutoWalkSpeed)
+    else
+        AutoWalkBox.Text = tostring(AutoWalkSpeed)
+    end
+end)
+
+SetAutoWalkPoint.MouseButton1Click:Connect(function()
+    local Character = Player.Character
+    local Root = Character and Character:FindFirstChild("HumanoidRootPart")
+    if Root then
+        AutoWalkCheckpoint = Root.Position
+        SetAutoWalkPoint.Text = "Point Saved!"
+        task.delay(1, function()
+            SetAutoWalkPoint.Text = "Set Target Point"
+        end)
+    end
+end)
+
+local ActiveTween = nil
+
+StartAutoWalk.MouseButton1Click:Connect(function()
+    if IsAutoWalking then
+        IsAutoWalking = false
+        if ActiveTween then
+            ActiveTween:Cancel()
+            ActiveTween = nil
+        end
+        StartAutoWalk.Text = "Start Ultra Speed"
+        return
+    end
+
+    if not AutoWalkCheckpoint then
+        StartAutoWalk.Text = "Set Point First!"
+        task.delay(1, function()
+            StartAutoWalk.Text = "Start Ultra Speed"
+        end)
+        return
+    end
+
+    local Character = Player.Character
+    local Root = Character and Character:FindFirstChild("HumanoidRootPart")
+    local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+
+    if not Root or not Humanoid or Humanoid.Health <= 0 then
+        return
+    end
+
+    IsAutoWalking = true
+    StartAutoWalk.Text = "Stop Walk"
+
+    -- Включаем постоянный NoClip во время движения Tween
+    task.spawn(function()
+        while IsAutoWalking do
+            local Char = Player.Character
+            if Char then
+                for _, part in ipairs(Char:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+            RunService.Stepped:Wait()
+        end
+    end)
+
+    task.spawn(function()
+        local CurrentPos = Root.Position
+        local TargetPos = Vector3.new(AutoWalkCheckpoint.X, CurrentPos.Y, AutoWalkCheckpoint.Z)
+        local Distance = (TargetPos - CurrentPos).Magnitude
+
+        -- Рассчитываем точное время полета на основе заданной скорости
+        local TimeToReach = Distance / math.max(AutoWalkSpeed, 10)
+
+        -- Направляем персонажа лицом к цели
+        Root.CFrame = CFrame.new(CurrentPos, TargetPos)
+
+        local TweenInfoConfig = TweenInfo.new(
+            TimeToReach,
+            Enum.EasingStyle.Linear,
+            Enum.EasingDirection.Out
+        )
+
+        ActiveTween = TweenService:Create(Root, TweenInfoConfig, {
+            CFrame = CFrame.new(TargetPos, TargetPos + Root.CFrame.LookVector)
+        })
+
+        ActiveTween:Play()
+
+        ActiveTween.Completed:Connect(function(status)
+            if status == Enum.PlaybackState.Completed then
+                IsAutoWalking = false
+                StartAutoWalk.Text = "Reached Target!"
+                task.delay(1.5, function()
+                    StartAutoWalk.Text = "Start Ultra Speed"
+                end)
+            end
+        end)
+    end)
+end)
+
+--==================================================
+-- TABS SWITCHING
+--==================================================
+
+local function SwitchTab(ActiveButton, ActiveFrame)
+    SpeedFrame.Visible = false
+    TeleportFrame.Visible = false
+    AutoWalkFrame.Visible = false
+
+    SpeedTab.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
+    TeleportTab.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
+    AutoWalkTab.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
+
+    ActiveFrame.Visible = true
+    ActiveButton.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+end
+
+SpeedTab.MouseButton1Click:Connect(function() SwitchTab(SpeedTab, SpeedFrame) end)
+TeleportTab.MouseButton1Click:Connect(function() SwitchTab(TeleportTab, TeleportFrame) end)
+AutoWalkTab.MouseButton1Click:Connect(function() SwitchTab(AutoWalkTab, AutoWalkFrame) end)
+
+--==================================================
+-- FLOATING ICON & DRAG SYSTEM
+--==================================================
+
+local FloatingIcon = Instance.new("TextButton")
+FloatingIcon.Name = "FloatingIcon"
+FloatingIcon.Size = UDim2.new(0, 52, 0, 52)
+FloatingIcon.Position = UDim2.new(0, 20, 0.5, -26)
+FloatingIcon.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+FloatingIcon.BorderSizePixel = 0
+FloatingIcon.Text = IconText
+FloatingIcon.TextColor3 = Color3.new(1, 1, 1)
+FloatingIcon.TextSize = 22
+FloatingIcon.Font = Enum.Font.GothamBold
+FloatingIcon.Visible = false
+FloatingIcon.Active = true
+FloatingIcon.Parent = ScreenGui
+
+local IconCorner = Instance.new("UICorner")
+IconCorner.CornerRadius = UDim.new(1, 0)
+IconCorner.Parent = FloatingIcon
+
+IconBox.FocusLost:Connect(function()
+    local Text = IconBox.Text
+    if Text ~= "" then
+        IconText = string.sub(Text, 1, 3)
+        FloatingIcon.Text = IconText
+        IconBox.Text = IconText
+    end
+end)
+
+Close.MouseButton1Click:Connect(function()
+    Main.Visible = false
+    FloatingIcon.Visible = true
+end)
+
+local DragObject, DragStart, StartPosition, Dragging, HasDragged = nil, nil, nil, false, false
+
+local function BeginDrag(Object, Input)
+    DragObject = Object
+    DragStart = Input.Position
+    StartPosition = Object.Position
+    Dragging = true
+    HasDragged = false
+end
+
+TitleBar.InputBegan:Connect(function(Input)
+    if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+        BeginDrag(Main, Input)
+    end
+end)
+
+FloatingIcon.InputBegan:Connect(function(Input)
+    if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+        BeginDrag(FloatingIcon, Input)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(Input)
+    if not Dragging or not DragObject then return end
+
+    if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
+        local Delta = Input.Position - DragStart
+        if Delta.Magnitude > 2 then
+            HasDragged = true
+        end
+
+        DragObject.Position = UDim2.new(
+            StartPosition.X.Scale,
+            StartPosition.X.Offset + Delta.X,
+            StartPosition.Y.Scale,
+            StartPosition.Y.Offset + Delta.Y
+        )
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(Input)
+    if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+        Dragging = false
+        DragObject = nil
+    end
+end)
+
+FloatingIcon.MouseButton1Click:Connect(function()
+    if not HasDragged then
+        Main.Visible = true
+        FloatingIcon.Visible = false
+    end
+end)
+
+--==================================================
+-- LOOPS (SPEED & FPS)
+--==================================================
+
+task.spawn(function()
+    while task.wait(0.5) do
+        if SpeedEnabled and not IsAutoWalking then
+            local Character = Player.Character
+            local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
+            if Humanoid and Humanoid.WalkSpeed ~= SpeedValue then
+                Humanoid.WalkSpeed = SpeedValue
+            end
+        end
+    end
+end)
+
+local Frames = 0
+local LastFPS = os.clock()
+
+RunService.RenderStepped:Connect(function()
+    Frames += 1
+end)
+
+task.spawn(function()
+    while task.wait(1) do
+        local Now = os.clock()
+        local Delta = Now - LastFPS
+        if Delta > 0 then
+            FPSLabel.Text = "FPS: " .. math.floor(Frames / Delta)
+        end
+        Frames = 0
+        LastFPS = Now
+    end
+end)
